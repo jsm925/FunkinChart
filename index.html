@@ -1,0 +1,187 @@
+<html>
+    <head>
+        <title>Friday Night Funkin' chart visualizer</title>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link href="custom.css" rel="stylesheet" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
+    </head>
+    <body class="bg-dark text-light pt-5">
+        <div class="container">
+            <div class="row text-center">
+                <h4>Friday Night Funkin' chart visualizer</h4>
+                <p>A simple visualizer for <em>Friday Night Funkin'</em> charts with waveform preview.</p>
+                <div class="d-flex justify-content-center">
+                    <button id="change-chart" type="button" class="btn btn-secondary d-none"><i class="bi bi-arrow-left"></i> Load another chart / track(s)</button>
+                </div>
+            </div>
+            <div id="loader-ui" class="row">
+                <div class="mx-auto p-0">
+                    <div class="card bg-secondary my-3">
+                        <div class="card-body">
+                            <h4 class="text-center">Load a vanilla Friday Night Funkin' chart + song</h4>
+                            <div class="col-12 col-sm-5 col-lg-3 mx-auto">
+                                <div class="input-group mx-auto">
+                                    <select class="form-select" id="fnf-select"></select>
+                                    <button id="fnf-ok" class="btn btn-primary">OK</button>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center my-3">
+                                <div class="flex-grow-1"><hr /></div>
+                                <div class="px-3">OR</div>
+                                <div class="flex-grow-1"><hr /></div>
+                            </div>
+                            <h4 class="text-center">Upload a custom chart and song</h4>
+                            <p class="text-center">Upload a chart JSON file and separate audio tracks (voices and instrumental).<br /></p>
+                            <div class="d-flex justify-content-center">
+                                <div class="align-self-center">
+                                    <h5 class="mb-0">Chart</h5>
+                                    <small class="muted">Required</small>
+                                    <div class="mt-2">
+                                        <label>Upload here chart JSON file</label>
+                                        <input class="form-control" type="file" id="chart-upload" />
+                                        <small id="chart-upload-error" class="d-none text-danger">Error while loading file.<br />Is this a valid chart or JSON file?</small>
+                                    </div>
+                                </div>
+                                <div class="mx-3">
+                                    <h5 class="mb-0">Audio</h5>
+                                    <small class="muted">At least one is required</small>
+                                    <div class="mt-2">
+                                        <label>Upload an audio file for voices</label>
+                                        <input class="form-control" type="file" id="voice-upload" />
+                                        <small id="voice-upload-error" class="d-none text-danger">
+                                            Error while loading audio file.<br />Either unsupported file by the browser or not an audio file.
+                                        </small>
+                                    </div>
+                                    <div>
+                                        <label>Upload here instrumental audio file</label>
+                                        <input class="form-control" type="file" id="inst-upload" />
+                                        <small id="inst-upload-error" class="d-none text-danger">
+                                            Error while loading audio file.<br />Either unsupported file by the browser or not an audio file.
+                                        </small>
+                                    </div>
+                                    <audio class="d-none" id="voice-tester"></audio>
+                                    <audio class="d-none" id="inst-tester"></audio>
+                                </div>
+                                <div class="align-self-center">
+                                    <div class="mt-4 mb-2">Everything ready?</div>
+                                    <button id="upload-confirm" type="button" disabled class="btn btn-primary">LOAD CHART</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="main-ui" class="row mt-2 mb-5" style="position: relative">
+                <div style="max-height: 720px" id="canvas-container" class="col-md-9 border border-secondary p-0 overflow-auto">
+                    <canvas style="min-width: 100%" class="mw-100" id="main-canvas"></canvas>
+                </div>
+                <div class="col-md-3 p-0">
+                    <div class="card border-primary bg-transparent">
+                        <div class="card-body">
+                            <h5>Tracks</h5>
+                            <div class="card mb-2 bg-secondary">
+                                <div class="card-body">
+                                    <div>Instrumental</div>
+                                    <div class="d-flex align-items-center mt-2">
+                                        <div class="pe-2">
+                                            <button type="button" class="btn btn-sm w-100 btn-primary"><i class="bi bi-volume-up-fill"></i></button>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <input id="instrumental-slider" type="range" class="form-range" min="0" max="100" value="100" />
+                                        </div>
+                                        <div class="ps-2">
+                                            <input id="instrumental-input" type="number" class="form-control form-control-sm" min="0" max="100" value="100" style="width: 4.5em" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card mb-2 bg-secondary">
+                                <div class="card-body">
+                                    <div>Voices</div>
+                                    <div class="d-flex align-items-center mt-2">
+                                        <div class="pe-2">
+                                            <button type="button" class="btn btn-sm w-100 btn-primary"><i class="bi bi-volume-up-fill"></i></button>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <input id="voices-slider" type="range" class="form-range" min="0" max="100" value="100" />
+                                        </div>
+                                        <div class="ps-2">
+                                            <input id="voices-input" type="number" class="form-control form-control-sm" min="0" max="100" value="100" style="width: 4.5em" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <hr />
+                            <h5>Main volume</h5>
+                            <div class="card mb-2 bg-secondary">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center">
+                                        <div class="pe-2">
+                                            <button type="button" class="btn btn-sm w-100 btn-primary"><i class="bi bi-volume-up-fill"></i></button>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <input id="main-slider" type="range" class="form-range" min="0" max="100" value="100" />
+                                        </div>
+                                        <div class="ps-2">
+                                            <input id="main-input" type="number" class="form-control form-control-sm" min="0" max="100" value="100" style="width: 4.5em" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <hr />
+                            <div class="text-center">
+                                <div class="text-muted">section <span id="section-text">0 / 0</span></div>
+                                <h2 id="time-text">00:00.00</h2>
+                            </div>
+                            <div class="d-flex justify-content-center align-items-center">
+                                <div>
+                                    <button id="prev-button" class="btn btn-primary"><i class="bi bi-skip-start-fill"></i></button>
+                                </div>
+                                <div>
+                                    <button id="play-button" class="btn btn-lg btn-primary"><i class="bi bi-play-fill"></i></button>
+                                </div>
+                                <div>
+                                    <button id="next-button" class="btn btn-primary"><i class="bi bi-skip-end-fill"></i></button>
+                                </div>
+                                <div class="ps-2">
+                                    <button id="stop-button" class="btn btn-lg btn-primary"><i class="bi bi-stop-fill"></i></button>
+                                </div>
+                            </div>
+                            <div class="text-center mt-2">
+                                <div class="text-muted"><span id="bpm-text">0</span> BPM</div>
+                            </div>
+                            <!--
+                            <div class="list-group mt-2">
+                                <label class="list-group-item bg-transparent text-light border-secondary">
+                                    <input class="form-check-input me-1" type="checkbox" value="" />
+                                    Play only this section
+                                </label>
+                                <label class="list-group-item bg-transparent text-light border-secondary">
+                                    <input class="form-check-input me-1" type="checkbox" value="" />
+                                    Loop
+                                </label>
+                            </div>
+                            -->
+                        </div>
+                    </div>
+                </div>
+                <div
+                    id="loading-overlay"
+                    class="text-light d-none align-items-center justify-content-center"
+                    style="position: absolute; background: rgba(0, 0, 0, 0.5); top: 0; left: 0; height: 100%; width: 100%"
+                >
+                    <div class="text-center">
+                        <h3>Loading...</h3>
+                        <span id="overlay-message"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/waveform-data@4.1.0/dist/waveform-data.js"></script>
+        <script src="main.js" type="module"></script>
+    </body>
+</html>

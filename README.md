@@ -26,7 +26,7 @@ Dynamic BPM charts have not been fully tested.
 Clone the project
 
 ```bash
-git clone https://github.com/jonathan25/FunkinChart
+git clone https://github.com/jsm925/FunkinChart
 ```
 
 This is just a static web page, you can run it locally with any simple web server like Python's 'SimpleHTTPServer', node.js, nginx, etc.

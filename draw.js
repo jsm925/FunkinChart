@@ -250,17 +250,12 @@ class Draw {
         }
     }
 
-    // TODO: This function can be simplified for clarity,
-    // right now is too convoluted and hard to follow what's going on.
     _drawWaveform(waveform, track, section = this.chart.currentSection) {
-        let scale = 1.0;
         let { height } = this.canvas;
-
         let position = this.chart.getPosition(section) / 1000;
-        let end = position + this.chart.getDuration(section) / 1000;
-
         let posX = 0;
 
+        // TODO: better handling of styles
         if (track == this.instTrack) {
             posX = this.waveInstPosX;
             this.ctxBg.fillStyle = this.waveformStyles.instrumental;
@@ -278,59 +273,51 @@ class Draw {
             return;
         }
 
-        let offsetFloat = this.pixelsPerSecond * position;
+        // always round offset values
+        let offset = Math.round(this.pixelsPerSecond * position);
 
+        let scale = 1.0;
         if (this.chart.dynamicBPM) {
             scale = this.chart.getBPM(section) / this.chart.maxBPM;
         }
-
-        // always round offset values
-        let offset = Math.round(offsetFloat);
-        let reverseOffset = Math.round(offsetFloat + height / scale - 1);
 
         if (offset >= waveform.length - height * scale) {
             offset = waveform.length - height * scale;
         }
 
-        this.ctxBg.lineWidth = 1;
+        const samples = Math.round(height / scale);
+        const lastSample = offset + samples;
+        const points = 2 * samples;
+        const shape = new Array(points);
 
-        let h = height - 1;
-        if (reverseOffset > waveform.length) {
-            reverseOffset = waveform.length - 1;
-            h = (waveform.length - offset) * scale;
-            const prevStyle = this.ctxBg.strokeStyle;
-            this.ctxBg.strokeStyle = "rgba(255,255,255,0.1)";
-            this._fillHatchedRect(this.ctxBg, posX, h, this.waveAmplitude, height - h);
-            this.ctxBg.strokeStyle = prevStyle;
+        const channel = waveform.channel(0);
+        
+        for (let y = 0, i = offset, j = 0; i < lastSample; i++, j++, y += scale) {
+            let maxSample = this._scaleX(channel.max_sample(i), this.waveAmplitude);
+            let minSample = this._scaleX(channel.min_sample(i), this.waveAmplitude);
+            
+            if (minSample - maxSample < 1) {
+                minSample = maxSample + 1;
+            }
+            
+            shape[j] = { x: posX + maxSample, y };
+            shape[points - j] = { x: posX + minSample, y };
         }
-
-        const waveformWidth = this.waveAmplitude / waveform.channels;
-
+        
         this.ctxBg.beginPath();
-        for (let c = 0, offsetX = posX; c < waveform.channels; c++, offsetX += waveformWidth) {
-            const channel = waveform.channel(c);
-
-            for (let y = 0, i = offset; y < height && i < waveform.length; y += scale, i++) {
-                const val = channel.max_sample(i);
-                this.ctxBg.lineTo(offsetX + this._scaleX(val, waveformWidth) + 0.5, y + 0.5);
-            }
-
-            for (let y = h, i = reverseOffset; y >= 0 && i >= offset; y -= scale, i--) {
-                const val = channel.min_sample(i);
-                this.ctxBg.lineTo(offsetX + this._scaleX(val, waveformWidth) + 0.5, y + 0.5);
-            }
-        }
+        shape.forEach((c) => {
+            this.ctxBg.lineTo(c.x, c.y + 0.5); // adding 0.5 as an attempt to pixel snapping
+        });
 
         this.ctxBg.fill();
-        this.ctxBg.stroke();
         this.ctxBg.closePath();
     }
 
-    _scaleX(amplitude, height) {
+    _scaleX(value, amplitude) {
         const range = 256;
         const offset = 128;
 
-        return height - ((amplitude + offset) * height) / range;
+        return amplitude - ((value + offset) * amplitude) / range;
     }
 
     _drawSectionNotes(section = this.chart.currentSection, overlap, fromSection) {

@@ -42,7 +42,7 @@ class Draw {
 
         this.dpr = window.devicePixelRatio;
 
-        let mqString = `(resolution: ${this.dpr}dppx)`;
+        const mqString = `(resolution: ${this.dpr}dppx)`;
         window.matchMedia(mqString).addEventListener("change", this._updatePixelRatio);
 
         this.update();
@@ -133,7 +133,7 @@ class Draw {
 
     _drawBg(section) {
         // console.log("bg update");
-        let { width, height } = this.canvas;
+        const { width, height } = this.canvas;
         this.ctxBg.clearRect(0, 0, width, height);
 
         this.ctxBg.fillStyle = "#121218";
@@ -141,14 +141,14 @@ class Draw {
 
         // Chart checkered grid
         for (let i = 0; i < 2; i++) {
-            let offsetX = this.chartPosX + i * (this.singleChartWidth + this.chartSeparatorWidth);
+            const offsetX = this.chartPosX + i * (this.singleChartWidth + this.chartSeparatorWidth);
             for (let j = 0; j < this.stepsPerSection; j++) {
                 for (let k = 0; k < 4; k++) {
                     this.ctxBg.beginPath();
-                    this.ctxBg.fillStyle = (j + k) % 2 == 0 ? "#121218" : "#1b1921";
+                    this.ctxBg.fillStyle = (j + k) % 2 === 0 ? "#121218" : "#1b1921";
 
-                    let x = offsetX + this.cellSize * k;
-                    let y = this.cellSize * j;
+                    const x = offsetX + this.cellSize * k;
+                    const y = this.cellSize * j;
 
                     this.ctxBg.fillRect(x, y, this.cellSize, this.cellSize);
                 }
@@ -196,7 +196,7 @@ class Draw {
 
     _updatePixelsPerSecond() {
         if (this.chart.dynamicBPM) {
-            let fastestSection = Chart.getSectionDuration(this.chart.maxBPM) / 1000;
+            const fastestSection = Chart.getSectionDuration(this.chart.maxBPM) / 1000;
             this.pixelsPerSecond = this.canvas.height / fastestSection;
             return;
         }
@@ -230,7 +230,7 @@ class Draw {
 
     _resampleWaveform(waveform) {
         // scale should never be rounded, use always full precision
-        let scale = waveform.sample_rate / this.pixelsPerSecond;
+        const scale = waveform.sample_rate / this.pixelsPerSecond;
         return waveform.resample({ scale });
     }
 
@@ -238,29 +238,29 @@ class Draw {
         let newScale = 0;
         if (this._waveformInstrumental) {
             newScale = this.waveformInstrumental.sample_rate / this.pixelsPerSecond;
-            if (this.waveformInstrumental.scale != newScale) {
+            if (this.waveformInstrumental.scale !== newScale) {
                 this.waveformInstrumental = this._resampleWaveform(this._waveformInstrumental);
             }
         }
         if (this._waveformVoice) {
             newScale = this.waveformVoice.sample_rate / this.pixelsPerSecond;
-            if (this.waveformVoice.scale != newScale) {
+            if (this.waveformVoice.scale !== newScale) {
                 this.waveformVoice = this._resampleWaveform(this._waveformVoice);
             }
         }
     }
 
     _drawWaveform(waveform, track, section = this.chart.currentSection) {
-        let { height } = this.canvas;
-        let position = this.chart.getPosition(section) / 1000;
+        const { height } = this.canvas;
+        const position = this.chart.getPosition(section) / 1000;
         let posX = 0;
 
         // TODO: better handling of styles
-        if (track == this.instTrack) {
+        if (track === this.instTrack) {
             posX = this.waveInstPosX;
             this.ctxBg.fillStyle = this.waveformStyles.instrumental;
             this.ctxBg.strokeStyle = this.waveformStyles.instrumental;
-        } else if (track == this.voiceTrack) {
+        } else if (track === this.voiceTrack) {
             posX = this.waveVoicePosX;
             this.ctxBg.fillStyle = this.waveformStyles.voices;
             this.ctxBg.strokeStyle = this.waveformStyles.voices;
@@ -291,19 +291,19 @@ class Draw {
         const shape = new Array(points);
 
         const channel = waveform.channel(0);
-        
+
         for (let y = 0, i = offset, j = 0; i < lastSample; i++, j++, y += scale) {
-            let maxSample = this._scaleX(channel.max_sample(i), this.waveAmplitude);
+            const maxSample = this._scaleX(channel.max_sample(i), this.waveAmplitude);
             let minSample = this._scaleX(channel.min_sample(i), this.waveAmplitude);
-            
+
             if (minSample - maxSample < 1) {
                 minSample = maxSample + 1;
             }
-            
+
             shape[j] = { x: posX + maxSample, y };
             shape[points - j] = { x: posX + minSample, y };
         }
-        
+
         this.ctxBg.beginPath();
         shape.forEach((c) => {
             this.ctxBg.lineTo(c.x, c.y + 0.5); // adding 0.5 as an attempt to pixel snapping
@@ -321,16 +321,14 @@ class Draw {
     }
 
     _drawSectionNotes(section = this.chart.currentSection, overlap, fromSection) {
-        let step;
-
         const mustHitSection = this.chart.getMustHitSection(section);
-        let notes = this.chart.getSectionNotes(section);
+        const playersNotes = this.chart.getSectionNotes(section);
+        let sectionDuration;
 
         let offset = 0;
 
         if (!overlap) {
-            const duration = this.chart.getDuration(section);
-            step = duration / this.stepsPerSection;
+            sectionDuration = this.chart.getDuration(section);
 
             // Fill with a rectangle which player is focused on camera
             let x = this.chartPosX;
@@ -350,67 +348,47 @@ class Draw {
             }
         } else {
             // confusing shit pt. 2
-            const duration = this.chart.getDuration(fromSection);
-            step = duration / this.stepsPerSection;
-
+            sectionDuration = this.chart.getDuration(fromSection);
             offset = (section - fromSection) * this.canvas.height;
         }
 
-        const bothPlayers = notes.map((n) => n[1]).some((k) => k > 3);
+        const sectionPosition = this.chart.getPosition(section);
 
-        if (mustHitSection && !bothPlayers) {
-            // if it's "player one" (BF) solo/turn, shift the notes [to the right] before drawing them
-            notes = notes.map((note) => {
-                let n = note.slice();
-                n[1] += 4;
-                return n;
+        const n = [playersNotes.player, playersNotes.opponent];
+        n.forEach((notes, i) => {
+            const xa = i > 0 ? this.chartPosX : this.canvas.width - this.singleChartWidth;
+            notes.forEach((note) => {
+                const { position, sustain } = this._getNotePositions(
+                    note,
+                    sectionPosition,
+                    sectionDuration
+                );
+                const { key } = note;
+                const y = offset + position;
+                const x = xa + this.cellSize * key;
+
+                this._drawNote(key, sustain, x, y);
             });
-        } else if (mustHitSection && bothPlayers) {
-            // if both players are singing, swap positions.
-            let b = notes
-                .filter((note) => note[1] >= 4)
-                .map((note) => {
-                    let n = note.slice();
-                    n[1] = note[1] - 4;
-                    return n;
-                });
-
-            let a = notes
-                .filter((note) => note[1] < 4)
-                .map((note) => {
-                    let n = note.slice();
-                    n[1] = note[1] + 4;
-                    return n;
-                });
-
-            notes = [...a, ...b];
-        }
-
-        let position = this.chart.getPosition(section);
-        notes.forEach((note) => {
-            const index = (note[0] - position) / step; // note[0]/step
-            const key = note[1];
-            const sustain = note[2] / step;
-            this._drawNote(index, key, sustain, offset);
         });
     }
 
-    _drawNote(index, key, sustain, offset = 0) {
-        const x = this.cellSize * key + this.chartPosX + (key > 3 ? this.cellSize * 0.5 : 0);
-        const y = offset + this.cellSize * index; // offset + this.cellSize * (index % this.stepsPerSection)
+    _getNotePositions(note, sectionPosition, sectionDuration) {
+        const position = this.canvas.height * ((note.position - sectionPosition) / sectionDuration);
+        const sustain = this.canvas.height * (note.sustain / sectionDuration);
+        return { position, sustain };
+    }
 
-        const i = key % 4;
-
-        this._drawArrow(i, x, y);
+    _drawNote(key, sustain, x, y) {
+        this._drawArrow(key, x, y);
 
         if (sustain > 0) {
-            const xd = x + this.cellSize * (0.25 + 0.25 / 2);
+            const xd = x + this.cellSize * 0.375;
             const yd = y + this.cellSize;
 
-            this.ctxBg.fillStyle = arrowFillStyles[i];
+            this.ctxBg.fillStyle = arrowFillStyles[key];
 
             const w = this.cellSize / 4;
-            const h = this.cellSize * sustain;
+            const h = sustain;
 
             this.ctxBg.beginPath();
             this.ctxBg.rect(xd, yd, w, h);
@@ -423,19 +401,19 @@ class Draw {
             this.ctxBg.lineWidth = lineWidthInner;
             this._insetRectStroke(this.ctxBg, xd, yd, w, h);
 
-            this.ctxBg.strokeStyle = arrowStrokeStyles[i];
+            this.ctxBg.strokeStyle = arrowStrokeStyles[key];
             this.ctxBg.lineWidth = lineWidthOutside;
             this._insetRectStroke(this.ctxBg, xd, yd, w, h, true);
 
-            /*this.ctxBg.beginPath();
+            /* this.ctxBg.beginPath();
             this.ctxBg.rect(xd, yd, w, h);
             this.ctxBg.lineWidth = 1;
-            this.ctxBg.stroke();*/
+            this.ctxBg.stroke(); */
         }
     }
 
     // drawing an arrow with shape
-    _drawArrow = (index, x = 0, y = 0) => {
+    _drawArrow(index, x = 0, y = 0) {
         const arrow = arrows[index];
         this.ctxBg.moveTo(...arrow[0]);
 
@@ -469,7 +447,7 @@ class Draw {
         this.ctxBg.lineWidth = 1;
         this.ctxBg.strokeStyle = arrowStrokeStyles[index];
         this.ctxBg.stroke();
-    };
+    }
 
     // dumb way to do sustain notes rectagles borders
     _insetRectStroke(ctx, x, y, w, h, final) {
@@ -544,12 +522,10 @@ class Draw {
             ctx.lineTo(xd, yd);
         }
         ctx.stroke();
-
-        return;
     }
 
     update() {
-        let { width, height } = this.canvas;
+        const { width, height } = this.canvas;
 
         this.canvasBg.width = width;
         this.canvasBg.height = height;
@@ -594,12 +570,12 @@ class Draw {
             return;
         }
 
-        let event = {};
+        const event = {};
 
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        let currentTime = this.audioMixer.getCurrentTime(); // seconds
-        let currentTimeMs = currentTime * 1000; // milliseconds
+        const currentTime = this.audioMixer.getCurrentTime(); // seconds
+        const currentTimeMs = currentTime * 1000; // milliseconds
         event.currentTime = currentTime;
 
         if (currentTimeMs > this._sectionEnd || currentTimeMs < this._sectionStart) {
@@ -615,7 +591,7 @@ class Draw {
             this._sectionStart = this.chart.getPosition(this._playbackSection);
 
             if (this.chart.dynamicBPM) {
-                let bpm = this.chart.getBPM(this._playbackSection);
+                const bpm = this.chart.getBPM(this._playbackSection);
                 this._previousBPM = this._currentBPM;
                 this._currentBPM = bpm;
 
@@ -633,7 +609,7 @@ class Draw {
         }
 
         let offset = (currentTimeMs - this._sectionStart) / this._sectionDuration;
-        let index = offset * this.stepsPerSection;
+        const index = offset * this.stepsPerSection;
         offset *= this.canvas.height;
 
         this.ctx.beginPath();
@@ -644,13 +620,13 @@ class Draw {
 
         this.ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
 
-        let ya = this.cellSize * Math.floor(index);
+        const ya = this.cellSize * Math.floor(index);
         this.ctx.fillRect(this.chartPosX, ya, this.canvas.width, this.cellSize);
 
-        /*this.ctx.fillStyle = "#888";
+        /* this.ctx.fillStyle = "#888";
         this.ctx.globalCompositeOperation = "multiply";
         this.ctx.fillRect(this.waveInstPosX, 0, this.chartPosX - this.waveInstPosX, offset);
-        this.ctx.globalCompositeOperation = "source-over";*/
+        this.ctx.globalCompositeOperation = "source-over"; */
 
         this.dispatch("animationframe", event);
 

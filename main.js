@@ -1,4 +1,3 @@
-// import "./util.js";
 import { UI } from "./ui.js";
 import { Draw } from "./draw.js";
 import * as util from "./util.js";
@@ -6,7 +5,6 @@ import { Chart } from "./chart.js";
 import { AudioMixer } from "./audio.js";
 
 let mainCanvas = null;
-let canvasContainer = null;
 let canvasHandler = null;
 let uiHandler = null;
 let audioMixer = null;
@@ -152,13 +150,13 @@ const predefinedSongs = [
 const resizeObserver = new ResizeObserver((entries) => {
     // console.log("Size changed");
 
-    for (let entry of entries) {
+    for (const entry of entries) {
         if (entry.contentBoxSize) {
             const contentBoxSize = Array.isArray(entry.contentBoxSize)
                 ? entry.contentBoxSize[0]
                 : entry.contentBoxSize;
 
-            let dimensions = {
+            const dimensions = {
                 width: contentBoxSize.inlineSize,
                 height: contentBoxSize.blockSize,
             };
@@ -170,7 +168,7 @@ const resizeObserver = new ResizeObserver((entries) => {
 
 function updateCanvasSize(dimensions) {
     if (!dimensions) {
-        dimensions = util.getElementDimensions(canvasContainer);
+        dimensions = util.getElementDimensions(mainCanvas);
     }
 
     mainCanvas.width = dimensions.width * window.devicePixelRatio;
@@ -220,7 +218,7 @@ async function loadCustomSong(data) {
         }
 
         if (instrumental) {
-            let waveformInstrumental = await initWaveform(
+            const waveformInstrumental = await initWaveform(
                 instrumental,
                 audioMixer.instBuffer.sampleRate
             );
@@ -255,7 +253,7 @@ async function loadPredefinedSong(song) {
         uiHandler.setLoading(true, "Downloading chart and songs...");
         uiHandler.showLoader(false);
 
-        let [data, instrumental] = await Promise.all([
+        const [data, instrumental] = await Promise.all([
             fetch(song.chartData).then((response) => response.json()),
             fetch(song.instrumental).then((response) => response.arrayBuffer()),
         ]);
@@ -278,10 +276,10 @@ async function loadPredefinedSong(song) {
 
         uiHandler.setLoading(true, "Loading waveforms...");
 
-        let waveformVoice = song.voices
+        const waveformVoice = song.voices
             ? await initWaveform(voices, audioMixer.voicesBuffer.sampleRate)
             : null;
-        let waveformInstrumental = await initWaveform(
+        const waveformInstrumental = await initWaveform(
             instrumental,
             audioMixer.instBuffer.sampleRate
         );
@@ -308,20 +306,20 @@ function play() {
 
 function handleSectionChange(offset) {
     let newSection = 0;
-    let { playing } = audioMixer;
+    const { playing } = audioMixer;
 
     if (playing) {
-        let currentTimeMs = audioMixer.getCurrentTime() * 1000;
+        const currentTimeMs = audioMixer.getCurrentTime() * 1000;
         newSection = chart.getSectionFromPos(currentTimeMs) + offset;
     } else {
         newSection = chart.currentSection + offset;
     }
 
-    let n = chart.chartData.song.notes.length;
-    let currentSection = util.wrapIndex(newSection, n);
+    const n = chart.chartData.song.notes.length;
+    const currentSection = util.wrapIndex(newSection, n);
 
     chart.currentSection = currentSection;
-    let currentTime = chart.getPosition() / 1000;
+    const currentTime = chart.getPosition() / 1000;
 
     if (!playing) canvasHandler.updateSection();
     audioMixer.seek(currentTime);
@@ -349,12 +347,12 @@ function prevSection() {
 function pause() {
     if (chart) {
         audioMixer.pause();
-        let currentTime = audioMixer.getCurrentTime();
-        let currentTimeMs = currentTime * 1000;
+        const currentTime = audioMixer.getCurrentTime();
+        const currentTimeMs = currentTime * 1000;
 
         canvasHandler.stopPlaying();
 
-        let currentSection = chart.getSectionFromPos(currentTimeMs);
+        const currentSection = chart.getSectionFromPos(currentTimeMs);
         chart.currentSection = currentSection;
 
         uiHandler.update({ paused: true, currentSection, currentTime });
@@ -366,8 +364,8 @@ function stop() {
         audioMixer.stop();
         canvasHandler.stopPlaying();
 
-        let currentTime = 0;
-        let currentSection = 0;
+        const currentTime = 0;
+        const currentSection = 0;
         chart.currentSection = currentSection;
 
         uiHandler.update({ paused: true, currentSection, currentTime });
@@ -411,8 +409,7 @@ function main() {
     mainCanvas = document.getElementById("main-canvas");
     canvasHandler = new Draw(mainCanvas);
 
-    canvasContainer = document.getElementById("canvas-container");
-    resizeObserver.observe(canvasContainer);
+    resizeObserver.observe(mainCanvas);
 
     updateCanvasSize();
 

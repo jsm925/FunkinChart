@@ -22,7 +22,7 @@ class Chart {
 
             // not using map or reduce functions here to mantain clarity
             for (let i = 0; i < totalSections; i++) {
-                let section = this.chartData.song.notes[i];
+                const section = this.chartData.song.notes[i];
                 if (section.changeBPM) {
                     currentBPM = section.bpm;
                 }
@@ -32,13 +32,13 @@ class Chart {
                 durations.push(duration);
             }
 
-            let positions = [0];
+            const positions = [0];
             for (let i = 1; i < totalSections; i++) {
                 positions.push(positions[i - 1] + durations[i - 1]);
             }
 
             this.timings = durations.map((duration, i) => {
-                let position = positions[i];
+                const position = positions[i];
                 return { start: position, end: positions[i] + duration, duration, bpm: bpm[i] };
             });
 
@@ -57,7 +57,7 @@ class Chart {
             return this.timings[section].start;
         }
 
-        let { bpm } = this.chartData.song;
+        const { bpm } = this.chartData.song;
 
         return this.constructor.getSectionDuration(bpm) * section;
     }
@@ -67,7 +67,7 @@ class Chart {
             return this.timings.findIndex((i) => milliseconds >= i.start && milliseconds < i.end);
         }
 
-        let newSection = Math.floor(milliseconds / this.getDuration());
+        const newSection = Math.floor(milliseconds / this.getDuration());
         if (newSection >= this.chartData.song.length || newSection < 0) {
             return false;
         }
@@ -78,8 +78,46 @@ class Chart {
         return this.chartData.song.notes[section];
     }
 
-    getSectionNotes(section = this.currentSection) {
+    getRawSectionNotes(section = this.currentSection) {
         return this.chartData.song.notes[section].sectionNotes;
+    }
+
+    getSectionNotes(section = this.currentSection, relative = false) {
+        const rawNotes = this.chartData.song.notes[section].sectionNotes;
+        const bothPlayers = rawNotes.some((n) => n[1] > 3);
+        const mustHitSection = this.getMustHitSection(section);
+
+        let player = []; // BF
+        let opponent = [];
+
+        if (bothPlayers) {
+            opponent = this._filterNotesFirstHalf(rawNotes);
+            player = this._filterNotesSecondHalf(rawNotes);
+
+            if (mustHitSection) {
+                const swap = player;
+                player = opponent;
+                opponent = swap;
+            }
+        } else if (mustHitSection) {
+            player = this._filterNotesFirstHalf(rawNotes);
+        } else {
+            opponent = this._filterNotesFirstHalf(rawNotes);
+        }
+
+        return { player, opponent };
+    }
+
+    _filterNotesFirstHalf(notes) {
+        return notes
+            .filter((n) => n[1] < 4)
+            .map((n) => ({ position: n[0], key: n[1], sustain: n[2] }));
+    }
+
+    _filterNotesSecondHalf(notes) {
+        return notes
+            .filter((n) => n[1] >= 4)
+            .map((n) => ({ position: n[0], key: n[1] - 4, sustain: n[2] }));
     }
 
     getMustHitSection(section = this.currentSection) {
@@ -132,7 +170,7 @@ class Chart {
                     if (this.overlaps.has(k)) {
                         this.overlaps.get(k).add(i);
                     } else {
-                        let overlapSections = new Set();
+                        const overlapSections = new Set();
                         overlapSections.add(i);
                         this.overlaps.set(k, overlapSections);
                     }

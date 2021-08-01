@@ -574,7 +574,24 @@ class Draw {
 
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        const currentTime = this.audioMixer.getCurrentTime(); // seconds
+        let currentTime = this.audioMixer.getCurrentTime(); // seconds
+
+        // This snippet allows the canvas to update the playback cursor as a workaround for
+        // devices or browsers in which the Web Audio API timer have a lower precision.
+        // (https://developer.mozilla.org/en-US/docs/Web/API/BaseAudioContext/currentTime#reduced_time_precision)
+        // We rely on Web Audio API timer always and not the requestAnimationFrame timestamp
+        // to know the current playback position.
+        // This could be removed in the future if needed since just makes the animation smoother.
+        // Adapted and simplified version from /j: https://www.youtube.com/watch?v=bZe5J8SVCYQ
+        const sameAudioTime = this._lastAudioTime === currentTime;
+        this._lastAudioTime = currentTime;
+
+        if (sameAudioTime) {
+            currentTime = currentTime + (timestamp - this._lastTimestamp) / 1000;
+        }
+
+        this._lastTimestamp = timestamp;
+
         const currentTimeMs = currentTime * 1000; // milliseconds
         event.currentTime = currentTime;
 
